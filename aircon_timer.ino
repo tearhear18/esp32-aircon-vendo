@@ -98,10 +98,10 @@ String scanNetworks() {
       
       // Create option with signal strength indicator
       String signalBars = "";
-      if (rssi > -50) signalBars = "📶📶📶📶";
-      else if (rssi > -60) signalBars = "📶📶📶";
-      else if (rssi > -70) signalBars = "📶📶";
-      else signalBars = "📶";
+      if (rssi > -50) signalBars = "Excellent";
+      else if (rssi > -60) signalBars = "Good";
+      else if (rssi > -70) signalBars = "Fair";
+      else signalBars = "Weak";
       
       networks += "<option value='" + ssid + "'>" + ssid + " (" + signalBars + " " + rssi + "dBm, " + security + ")</option>";
     }
@@ -174,335 +174,158 @@ void handleRoot() {
     lastScan = millis();
   }
   
-  String html = R"(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>ESP32 Aircon Timer - Configuration</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body { 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-        .container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-            background: white; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .header h1 { margin: 0; font-size: 2em; }
-        .header p { margin: 10px 0 0 0; opacity: 0.9; }
-        
-        .content { padding: 30px; }
-        
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .status-card {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            border-left: 4px solid #4CAF50;
-        }
-        
-        .status-card h3 {
-            margin: 0 0 15px 0;
-            color: #333;
-            font-size: 1.1em;
-        }
-        
-        .status-item {
-            display: flex;
-            justify-content: space-between;
-            margin: 8px 0;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .status-item:last-child { border-bottom: none; }
-        
-        .status-label { font-weight: 500; color: #666; }
-        .status-value { color: #333; font-family: monospace; }
-        
-        .wifi-form {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            margin-top: 20px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #333;
-        }
-        
-        select, input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
-        
-        select:focus, input:focus {
-            outline: none;
-            border-color: #4CAF50;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s;
-        }
-        
-        .btn:hover { transform: translateY(-2px); }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-            margin-top: 10px;
-        }
-        
-        .refresh-btn {
-            float: right;
-            background: #17a2b8;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
-        .connected { color: #28a745; font-weight: bold; }
-        .disconnected { color: #dc3545; font-weight: bold; }
-        
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            font-size: 14px;
-            border-top: 1px solid #eee;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🌡️ ESP32 Aircon Timer</h1>
-            <p>Configuration & Status Dashboard</p>
-        </div>
-        
-        <div class="content">
-            <div class="status-grid">
-                <div class="status-card">
-                    <h3>📶 WiFi Status</h3>
-                    <div id="wifi-status">Loading...</div>
-                </div>
-                
-                <div class="status-card">
-                    <h3>🕒 Clock & Timer</h3>
-                    <div id="timer-status">Loading...</div>
-                </div>
-                
-                <div class="status-card">
-                    <h3>💻 Device Info</h3>
-                    <div id="device-status">Loading...</div>
-                </div>
-                
-                <div class="status-card">
-                    <h3>❄️ Aircon Control</h3>
-                    <div id="aircon-status">Loading...</div>
-                </div>
-            </div>
-            
-            <div class="wifi-form">
-                <h3>WiFi Configuration
-                    <button class="refresh-btn" onclick="refreshNetworks()">🔄 Refresh</button>
-                </h3>
-                <form action="/save" method="POST">
-                    <div class="form-group">
-                        <label for="ssid">Available Networks:</label>
-                        <select id="ssid" name="ssid" onchange="document.getElementById('manual-ssid').value = this.value" required>
-                            <option value="">Select a network...</option>
-                            )" + scannedNetworks + R"(
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="manual-ssid">Or enter manually:</label>
-                        <input type="text" id="manual-ssid" placeholder="Network name (SSID)" 
-                               onchange="if(this.value) document.getElementById('ssid').value = this.value">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="password">WiFi Password:</label>
-                        <input type="password" id="password" name="password" placeholder="Enter WiFi password" required>
-                    </div>
-                    
-                    <button type="submit" class="btn">💾 Save & Connect</button>
-                </form>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p>Device will restart after saving new credentials</p>
-            <p>Auto-refresh every 5 seconds | Last updated: <span id="last-update"></span></p>
-        </div>
-    </div>
-
-    <script>
-        function updateStatus() {
-            fetch('/status')
-                .then(response => response.json())
-                .then(data => {
-                    // Update WiFi status
-                    const wifiHtml = `
-                        <div class="status-item">
-                            <span class="status-label">Status:</span>
-                            <span class="status-value ${data.wifiInfo.connected ? 'connected' : 'disconnected'}">
-                                ${data.wifiInfo.connected ? '✅ Connected' : '❌ Disconnected'}
-                            </span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">SSID:</span>
-                            <span class="status-value">${data.wifiInfo.ssid || 'None'}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">IP Address:</span>
-                            <span class="status-value">${data.wifiInfo.ip}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Signal:</span>
-                            <span class="status-value">${data.wifiInfo.rssi} dBm</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">MAC:</span>
-                            <span class="status-value">${data.wifiInfo.mac}</span>
-                        </div>
-                    `;
-                    document.getElementById('wifi-status').innerHTML = wifiHtml;
-                    
-                    // Update Timer status
-                    const timerHtml = `
-                        <div class="status-item">
-                            <span class="status-label">RTC Time:</span>
-                            <span class="status-value">${data.rtcInfo.time}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Temperature:</span>
-                            <span class="status-value">${data.rtcInfo.temperature}°C</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Timer:</span>
-                            <span class="status-value ${data.timerInfo.enabled ? 'connected' : 'disconnected'}">
-                                ${data.timerInfo.enabled ? '✅ Enabled' : '❌ Disabled'}
-                            </span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Schedule:</span>
-                            <span class="status-value">${data.timerInfo.onTime} - ${data.timerInfo.offTime}</span>
-                        </div>
-                    `;
-                    document.getElementById('timer-status').innerHTML = timerHtml;
-                    
-                    // Update Device status
-                    const deviceHtml = `
-                        <div class="status-item">
-                            <span class="status-label">Chip:</span>
-                            <span class="status-value">${data.deviceInfo.chipModel}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Uptime:</span>
-                            <span class="status-value">${Math.floor(data.deviceInfo.uptime / 3600)}h ${Math.floor((data.deviceInfo.uptime % 3600) / 60)}m</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Free Memory:</span>
-                            <span class="status-value">${(data.deviceInfo.freeHeap / 1024).toFixed(1)} KB</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Flash:</span>
-                            <span class="status-value">${(data.deviceInfo.flashSize / 1024 / 1024).toFixed(1)} MB</span>
-                        </div>
-                    `;
-                    document.getElementById('device-status').innerHTML = deviceHtml;
-                    
-                    // Update Aircon status
-                    const airconHtml = `
-                        <div class="status-item">
-                            <span class="status-label">Current State:</span>
-                            <span class="status-value ${data.timerInfo.airconState ? 'connected' : 'disconnected'}">
-                                ${data.timerInfo.airconState ? '❄️ ON' : '🔥 OFF'}
-                            </span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Auto Control:</span>
-                            <span class="status-value">${data.timerInfo.enabled ? 'Active' : 'Inactive'}</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Next Action:</span>
-                            <span class="status-value">${data.timerInfo.airconState ? 'Turn OFF at ' + data.timerInfo.offTime : 'Turn ON at ' + data.timerInfo.onTime}</span>
-                        </div>
-                    `;
-                    document.getElementById('aircon-status').innerHTML = airconHtml;
-                    
-                    document.getElementById('last-update').innerText = new Date().toLocaleTimeString();
-                })
-                .catch(error => {
-                    console.error('Error updating status:', error);
-                });
-        }
-        
-        function refreshNetworks() {
-            document.querySelector('.refresh-btn').innerText = '🔄 Scanning...';
-            fetch('/scan')
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById('ssid').innerHTML = '<option value="">Select a network...</option>' + data;
-                    document.querySelector('.refresh-btn').innerText = '🔄 Refresh';
-                })
-                .catch(error => {
-                    console.error('Error scanning networks:', error);
-                    document.querySelector('.refresh-btn').innerText = '🔄 Error';
-                });
-        }
-        
-        // Update status every 5 seconds
-        updateStatus();
-        setInterval(updateStatus, 5000);
-    </script>
-</body>
-</html>
-  )";
+  String html = "<!DOCTYPE html><html><head>";
+  html += "<title>ESP32 Aircon Timer - Configuration</title>";
+  html += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">";
+  html += "<style>";
+  html += "body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }";
+  html += ".container { max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; }";
+  html += ".header { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 30px; text-align: center; }";
+  html += ".header h1 { margin: 0; font-size: 2em; }";
+  html += ".header p { margin: 10px 0 0 0; opacity: 0.9; }";
+  html += ".content { padding: 30px; }";
+  html += ".status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }";
+  html += ".status-card { background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid #4CAF50; }";
+  html += ".status-card h3 { margin: 0 0 15px 0; color: #333; font-size: 1.1em; }";
+  html += ".status-item { display: flex; justify-content: space-between; margin: 8px 0; padding: 5px 0; border-bottom: 1px solid #eee; }";
+  html += ".status-item:last-child { border-bottom: none; }";
+  html += ".status-label { font-weight: 500; color: #666; }";
+  html += ".status-value { color: #333; font-family: monospace; }";
+  html += ".wifi-form { background: #f8f9fa; border-radius: 10px; padding: 25px; margin-top: 20px; }";
+  html += ".form-group { margin-bottom: 20px; }";
+  html += "label { display: block; margin-bottom: 8px; font-weight: 500; color: #333; }";
+  html += "select, input[type=\"password\"], input[type=\"text\"] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; transition: border-color 0.3s; }";
+  html += "select:focus, input:focus { outline: none; border-color: #4CAF50; }";
+  html += ".btn { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; transition: transform 0.2s; }";
+  html += ".btn:hover { transform: translateY(-2px); }";
+  html += ".refresh-btn { float: right; background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }";
+  html += ".connected { color: #28a745; font-weight: bold; }";
+  html += ".disconnected { color: #dc3545; font-weight: bold; }";
+  html += ".footer { text-align: center; padding: 20px; color: #666; font-size: 14px; border-top: 1px solid #eee; }";
+  html += "</style></head><body>";
+  
+  html += "<div class=\"container\">";
+  html += "<div class=\"header\">";
+  html += "<h1>ESP32 Aircon Timer</h1>";
+  html += "<p>Configuration & Status Dashboard</p>";
+  html += "</div>";
+  
+  html += "<div class=\"content\">";
+  html += "<div class=\"status-grid\">";
+  html += "<div class=\"status-card\"><h3>WiFi Status</h3><div id=\"wifi-status\">Loading...</div></div>";
+  html += "<div class=\"status-card\"><h3>Clock & Timer</h3><div id=\"timer-status\">Loading...</div></div>";
+  html += "<div class=\"status-card\"><h3>Device Info</h3><div id=\"device-status\">Loading...</div></div>";
+  html += "<div class=\"status-card\"><h3>Aircon Control</h3><div id=\"aircon-status\">Loading...</div>";
+  html += "<button class=\"btn\" onclick=\"toggleAircon()\" id=\"aircon-btn\">Toggle Aircon</button>";
+  html += "<button class=\"btn\" onclick=\"toggleTimer()\" id=\"timer-btn\" style=\"margin-top: 10px;\">Toggle Timer</button>";
+  html += "</div>";
+  html += "</div>";
+  
+  html += "<div class=\"wifi-form\">";
+  html += "<h3>WiFi Configuration <button class=\"refresh-btn\" onclick=\"refreshNetworks()\">Refresh</button></h3>";
+  html += "<form action=\"/save\" method=\"POST\">";
+  html += "<div class=\"form-group\">";
+  html += "<label for=\"ssid\">Available Networks:</label>";
+  html += "<select id=\"ssid\" name=\"ssid\" onchange=\"document.getElementById('manual-ssid').value = this.value\" required>";
+  html += "<option value=\"\">Select a network...</option>";
+  html += scannedNetworks;
+  html += "</select></div>";
+  
+  html += "<div class=\"form-group\">";
+  html += "<label for=\"manual-ssid\">Or enter manually:</label>";
+  html += "<input type=\"text\" id=\"manual-ssid\" placeholder=\"Network name (SSID)\" onchange=\"if(this.value) document.getElementById('ssid').value = this.value\">";
+  html += "</div>";
+  
+  html += "<div class=\"form-group\">";
+  html += "<label for=\"password\">WiFi Password:</label>";
+  html += "<input type=\"password\" id=\"password\" name=\"password\" placeholder=\"Enter WiFi password\" required>";
+  html += "</div>";
+  
+  html += "<button type=\"submit\" class=\"btn\">Save & Connect</button>";
+  html += "</form></div></div>";
+  
+  html += "<div class=\"footer\">";
+  html += "<p>Device will restart after saving new credentials</p>";
+  html += "<p>Auto-refresh every 5 seconds | Last updated: <span id=\"last-update\"></span></p>";
+  html += "</div></div>";
+  
+  html += "<script>";
+  html += "function updateStatus() {";
+  html += "fetch('/status').then(response => response.json()).then(data => {";
+  
+  html += "var wifiHtml = \"\";";
+  html += "wifiHtml += '<div class=\"status-item\"><span class=\"status-label\">Status:</span>';";
+  html += "wifiHtml += '<span class=\"status-value ' + (data.wifiInfo.connected ? 'connected' : 'disconnected') + '\">';";
+  html += "wifiHtml += data.wifiInfo.connected ? 'Connected' : 'Disconnected';";
+  html += "wifiHtml += '</span></div>';";
+  html += "wifiHtml += '<div class=\"status-item\"><span class=\"status-label\">SSID:</span>';";
+  html += "wifiHtml += '<span class=\"status-value\">' + (data.wifiInfo.ssid || 'None') + '</span></div>';";
+  html += "wifiHtml += '<div class=\"status-item\"><span class=\"status-label\">IP Address:</span>';";
+  html += "wifiHtml += '<span class=\"status-value\">' + data.wifiInfo.ip + '</span></div>';";
+  html += "wifiHtml += '<div class=\"status-item\"><span class=\"status-label\">Signal:</span>';";
+  html += "wifiHtml += '<span class=\"status-value\">' + data.wifiInfo.rssi + ' dBm</span></div>';";
+  html += "wifiHtml += '<div class=\"status-item\"><span class=\"status-label\">MAC:</span>';";
+  html += "wifiHtml += '<span class=\"status-value\">' + data.wifiInfo.mac + '</span></div>';";
+  html += "document.getElementById('wifi-status').innerHTML = wifiHtml;";
+  
+  html += "var timerHtml = \"\";";
+  html += "timerHtml += '<div class=\"status-item\"><span class=\"status-label\">RTC Time:</span>';";
+  html += "timerHtml += '<span class=\"status-value\">' + data.rtcInfo.time + '</span></div>';";
+  html += "timerHtml += '<div class=\"status-item\"><span class=\"status-label\">Temperature:</span>';";
+  html += "timerHtml += '<span class=\"status-value\">' + data.rtcInfo.temperature + '&deg;C</span></div>';";
+  html += "timerHtml += '<div class=\"status-item\"><span class=\"status-label\">Timer:</span>';";
+  html += "timerHtml += '<span class=\"status-value ' + (data.timerInfo.enabled ? 'connected' : 'disconnected') + '\">';";
+  html += "timerHtml += data.timerInfo.enabled ? 'Enabled' : 'Disabled';";
+  html += "timerHtml += '</span></div>';";
+  html += "timerHtml += '<div class=\"status-item\"><span class=\"status-label\">Schedule:</span>';";
+  html += "timerHtml += '<span class=\"status-value\">' + data.timerInfo.onTime + ' - ' + data.timerInfo.offTime + '</span></div>';";
+  html += "document.getElementById('timer-status').innerHTML = timerHtml;";
+  
+  html += "var deviceHtml = \"\";";
+  html += "deviceHtml += '<div class=\"status-item\"><span class=\"status-label\">Chip:</span>';";
+  html += "deviceHtml += '<span class=\"status-value\">' + data.deviceInfo.chipModel + '</span></div>';";
+  html += "deviceHtml += '<div class=\"status-item\"><span class=\"status-label\">Uptime:</span>';";
+  html += "deviceHtml += '<span class=\"status-value\">' + Math.floor(data.deviceInfo.uptime / 3600) + 'h ' + Math.floor((data.deviceInfo.uptime % 3600) / 60) + 'm</span></div>';";
+  html += "deviceHtml += '<div class=\"status-item\"><span class=\"status-label\">Free Memory:</span>';";
+  html += "deviceHtml += '<span class=\"status-value\">' + (data.deviceInfo.freeHeap / 1024).toFixed(1) + ' KB</span></div>';";
+  html += "deviceHtml += '<div class=\"status-item\"><span class=\"status-label\">Flash:</span>';";
+  html += "deviceHtml += '<span class=\"status-value\">' + (data.deviceInfo.flashSize / 1024 / 1024).toFixed(1) + ' MB</span></div>';";
+  html += "document.getElementById('device-status').innerHTML = deviceHtml;";
+  
+  html += "var airconHtml = \"\";";
+  html += "airconHtml += '<div class=\"status-item\"><span class=\"status-label\">Current State:</span>';";
+  html += "airconHtml += '<span class=\"status-value ' + (data.timerInfo.airconState ? 'connected' : 'disconnected') + '\">';";
+  html += "airconHtml += data.timerInfo.airconState ? 'ON' : 'OFF';";
+  html += "airconHtml += '</span></div>';";
+  html += "airconHtml += '<div class=\"status-item\"><span class=\"status-label\">Auto Control:</span>';";
+  html += "airconHtml += '<span class=\"status-value\">' + (data.timerInfo.enabled ? 'Active' : 'Inactive') + '</span></div>';";
+  html += "airconHtml += '<div class=\"status-item\"><span class=\"status-label\">Next Action:</span>';";
+  html += "airconHtml += '<span class=\"status-value\">' + (data.timerInfo.airconState ? 'Turn OFF at ' + data.timerInfo.offTime : 'Turn ON at ' + data.timerInfo.onTime) + '</span></div>';";
+  html += "document.getElementById('aircon-status').innerHTML = airconHtml;";
+  
+  html += "document.getElementById('last-update').innerText = new Date().toLocaleTimeString();";
+  html += "}).catch(error => { console.error('Error updating status:', error); }); }";
+  
+  html += "function refreshNetworks() {";
+  html += "document.querySelector('.refresh-btn').innerText = 'Scanning...';";
+  html += "fetch('/scan').then(response => response.text()).then(data => {";
+  html += "document.getElementById('ssid').innerHTML = '<option value=\"\">Select a network...</option>' + data;";
+  html += "document.querySelector('.refresh-btn').innerText = 'Refresh';";
+  html += "}).catch(error => { console.error('Error scanning networks:', error); document.querySelector('.refresh-btn').innerText = 'Error'; }); }";
+  
+  html += "function toggleAircon() {";
+  html += "fetch('/toggle-aircon').then(response => response.json()).then(data => {";
+  html += "if(data.success) { updateStatus(); alert(data.message); }";
+  html += "}).catch(error => { console.error('Error toggling aircon:', error); }); }";
+  
+  html += "function toggleTimer() {";
+  html += "fetch('/toggle-timer').then(response => response.json()).then(data => {";
+  html += "if(data.success) { updateStatus(); alert(data.message); }";
+  html += "}).catch(error => { console.error('Error toggling timer:', error); }); }";
+  
+  html += "updateStatus(); setInterval(updateStatus, 5000);";
+  html += "</script></body></html>";
+  
   server.send(200, "text/html", html);
 }
 
@@ -522,37 +345,32 @@ void handleSave() {
     // Save to EEPROM
     saveWiFiConfig();
     
-    String html = R"(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>WiFi Saved</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body { font-family: Arial; margin: 40px; background-color: #f0f0f0; text-align: center; }
-        .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>✅ WiFi Configuration Saved!</h1>
-        <div class="success">
-            <strong>New Settings:</strong><br>
-            SSID: )" + ssid + R"(<br>
-            Password: )" + String("*").substring(0, password.length()) + R"(
-        </div>
-        <p>Device will restart in 3 seconds and attempt to connect to your WiFi network.</p>
-        <p><small>If connection fails, hold the boot button for 3 seconds to enter config mode again.</small></p>
-    </div>
-    <script>
-        setTimeout(function(){ 
-            document.body.innerHTML = '<div class="container"><h1>Restarting...</h1><p>Please reconnect to your main WiFi network.</p></div>'; 
-        }, 3000);
-    </script>
-</body>
-</html>
-    )";
+    String html = "<!DOCTYPE html><html><head>";
+    html += "<title>WiFi Saved</title>";
+    html += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">";
+    html += "<style>";
+    html += "body { font-family: Arial; margin: 40px; background-color: #f0f0f0; text-align: center; }";
+    html += ".container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }";
+    html += ".success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0; }";
+    html += "</style></head><body>";
+    html += "<div class=\"container\">";
+    html += "<h1>WiFi Configuration Saved!</h1>";
+    html += "<div class=\"success\">";
+    html += "<strong>New Settings:</strong><br>";
+    html += "SSID: " + ssid + "<br>";
+    html += "Password: ";
+    for(int i = 0; i < password.length(); i++) {
+      html += "*";
+    }
+    html += "</div>";
+    html += "<p>Device will restart in 3 seconds and attempt to connect to your WiFi network.</p>";
+    html += "<p><small>If connection fails, hold the boot button for 3 seconds to enter config mode again.</small></p>";
+    html += "</div>";
+    html += "<script>";
+    html += "setTimeout(function(){ ";
+    html += "document.body.innerHTML = '<div class=\"container\"><h1>Restarting...</h1><p>Please reconnect to your main WiFi network.</p></div>'; ";
+    html += "}, 3000);";
+    html += "</script></body></html>";
     
     server.send(200, "text/html", html);
     
@@ -574,6 +392,28 @@ void handleScan() {
   scannedNetworks = networks;
   lastScan = millis();
   server.send(200, "text/html", networks);
+}
+
+void handleToggleAircon() {
+  // Toggle aircon manually
+  airconState = !airconState;
+  digitalWrite(RELAY_PIN, airconState ? HIGH : LOW);
+  digitalWrite(LED_PIN, airconState ? HIGH : LOW);
+  
+  Serial.printf("Aircon manually turned %s\n", airconState ? "ON" : "OFF");
+  
+  String response = "{\"success\": true, \"airconState\": " + String(airconState ? "true" : "false") + ", \"message\": \"Aircon turned " + String(airconState ? "ON" : "OFF") + "\"}";
+  server.send(200, "application/json", response);
+}
+
+void handleToggleTimer() {
+  // Toggle timer enable/disable
+  timerSettings.enabled = !timerSettings.enabled;
+  
+  Serial.printf("Timer %s\n", timerSettings.enabled ? "ENABLED" : "DISABLED");
+  
+  String response = "{\"success\": true, \"timerEnabled\": " + String(timerSettings.enabled ? "true" : "false") + ", \"message\": \"Timer " + String(timerSettings.enabled ? "enabled" : "disabled") + "\"}";
+  server.send(200, "application/json", response);
 }
 
 void handleNotFound() {
@@ -684,10 +524,8 @@ bool initializeWiFiAndNTP() {
   
   Serial.println("RTC time set from NTP!");
   
-  // Disconnect WiFi to save power
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
-  Serial.println("WiFi disconnected to save power");
+  // Keep WiFi connected for web server access
+  Serial.println("WiFi staying connected for web server access");
   
   return true;
 }
@@ -711,15 +549,29 @@ void setup() {
   // Load WiFi configuration from EEPROM
   loadWiFiConfig();
   
-  // Check if config button is pressed during startup (for 3 seconds)
+  // Check if config button is pressed during startup (for 5 seconds for easier detection)
   bool enterConfigMode = false;
   Serial.println("Hold BOOT button for 3 seconds to enter config mode...");
-  for(int i = 0; i < 30; i++) {
+  for(int i = 0; i < 50; i++) {  // Increased from 30 to 50 (5 seconds)
     if(digitalRead(CONFIG_BUTTON_PIN) == LOW) {
+      Serial.print(".");
       enterConfigMode = true;
+      // Continue checking to ensure button is held for full duration
+    } else if (enterConfigMode) {
+      // Button was released before 3 seconds
+      enterConfigMode = false;
+      Serial.println(" Button released too early, continuing normal boot");
       break;
     }
     delay(100);
+  }
+  
+  if (enterConfigMode) {
+    Serial.println(" BOOT button detected - CLEARING WiFi config and entering configuration mode");
+    // Clear WiFi configuration to force config mode
+    memset(&wifiConfig, 0, sizeof(wifiConfig));
+    wifiConfig.isConfigured = false;
+    saveWiFiConfig();
   }
   
   if (enterConfigMode || !wifiConfig.isConfigured) {
@@ -731,6 +583,8 @@ void setup() {
     startConfigMode();
     return; // Skip the rest of setup when in config mode
   }
+
+  Serial.printf("WiFi configured for: %s\n", wifiConfig.ssid);
 
   // Start I2C on ESP32 default pins (SDA=21, SCL=22)
   Wire.begin(21, 22);
@@ -756,9 +610,25 @@ void setup() {
       Serial.println("Failed to initialize WiFi/NTP. Using default RTC time.");
     }
   } else {
-    Serial.println("RTC time seems valid, skipping NTP sync");
+    Serial.println("RTC time seems valid, connecting to WiFi for web server...");
     Serial.printf("Current RTC time: %04d-%02d-%02d %02d:%02d:%02d\n",
       now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
+    
+    // Connect to WiFi for web server access
+    if (connectToWiFi()) {
+      // Setup web server for normal operation
+      server.on("/", handleRoot);
+      server.on("/save", HTTP_POST, handleSave);
+      server.on("/status", handleStatus);
+      server.on("/scan", handleScan);
+      server.on("/toggle-aircon", handleToggleAircon);
+      server.on("/toggle-timer", handleToggleTimer);
+      server.onNotFound(handleNotFound);
+      server.begin();
+      
+      Serial.println("Web server started for monitoring and control");
+      Serial.printf("Access dashboard at: http://%s\n", WiFi.localIP().toString().c_str());
+    }
   }
   
   // Initialize timer settings
@@ -818,6 +688,11 @@ void loop() {
     return;
   }
   
+  // Handle web server requests during normal operation
+  if (WiFi.status() == WL_CONNECTED) {
+    server.handleClient();
+  }
+  
   unsigned long currentMillis = millis();
   
   // Check for config button press during normal operation
@@ -855,9 +730,16 @@ void loop() {
       );
       
       controlAircon(shouldAirconBeOn);
-      Serial.printf("Timer: ON, Aircon: %s\n", airconState ? "ON" : "OFF");
+      Serial.printf("Timer: ON, Aircon: %s", airconState ? "ON" : "OFF");
     } else {
-      Serial.println("Timer: DISABLED");
+      Serial.printf("Timer: DISABLED, Aircon: %s", airconState ? "ON" : "OFF");
+    }
+    
+    // Show web server status
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.printf(" | Web: http://%s\n", WiFi.localIP().toString().c_str());
+    } else {
+      Serial.println(" | Web: Offline");
     }
   }
   
